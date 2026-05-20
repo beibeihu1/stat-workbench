@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1814">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stat Workbench">
+<title>Statistical Workbench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1814;
+    --ink-soft: #4a463f;
+    --ink-muted: #8a857a;
+    --paper: #f7f4ec;
+    --paper-warm: #efeadd;
+    --paper-deep: #e6dfcb;
+    --rule: #d8d1bb;
+    --rule-faint: #e8e1cc;
+    --accent: #8b2c1e;
+    --accent-soft: #c4a999;
+    --signal: #3d5a3a;
+    --warn: #8a6d1e;
+    --serif: 'Crimson Pro', Georgia, serif;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+
+    /* Safe areas for iPhone notch/home indicator */
+    --safe-top: env(safe-area-inset-top, 0);
+    --safe-bottom: env(safe-area-inset-bottom, 0);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--ink);
+    background: var(--paper);
+    background-image:
+      radial-gradient(ellipse at top, rgba(196, 169, 153, 0.10), transparent 60%);
+    min-height: 100vh;
+    overscroll-behavior-y: contain;
+  }
+
+  /* ====== MOBILE TOP BAR ====== */
+  .topbar {
+    position: sticky;
+    top: 0;
+    background: var(--ink);
+    color: var(--paper);
+    padding: calc(var(--safe-top) + 14px) 18px 14px;
+    z-index: 50;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.1);
+  }
+  .topbar-grid {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .topbar h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-style: italic;
+    font-size: 19px;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+  }
+  .topbar h1 .amp { color: var(--accent-soft); font-weight: 400; margin: 0 2px; }
+  .menu-btn {
+    background: none;
+    border: 1px solid rgba(247,244,236,0.3);
+    color: var(--paper);
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+  }
+  .menu-btn:active { background: rgba(247,244,236,0.1); }
+  .menu-icon {
+    display: inline-block;
+    width: 14px;
+    height: 10px;
+    position: relative;
+  }
+  .menu-icon::before, .menu-icon::after, .menu-icon span {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    height: 1.5px;
+    background: var(--paper);
+  }
+  .menu-icon::before { top: 0; }
+  .menu-icon span { top: 50%; transform: translateY(-50%); display: block; }
+  .menu-icon::after { bottom: 0; }
+
+  /* ====== MENU SHEET (mobile only) ====== */
+  .menu-sheet {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(26, 24, 20, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 240ms;
+  }
+  .menu-sheet.open { opacity: 1; pointer-events: auto; }
+  .menu-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    background: var(--paper);
+    border-radius: 16px 16px 0 0;
+    padding: 8px 0 calc(var(--safe-bottom) + 12px);
+    transform: translateY(100%);
+    transition: transform 280ms cubic-bezier(.32,.72,0,1);
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .menu-sheet.open .menu-panel { transform: translateY(0); }
+  .menu-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--rule);
+    border-radius: 2px;
+    margin: 8px auto 14px;
+  }
+  .menu-title {
+    font-family: var(--sans);
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    padding: 0 22px 10px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 6px;
+  }
+  .menu-item {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 16px 22px;
+    text-align: left;
+    font-family: var(--serif);
+    font-size: 18px;
+    color: var(--ink);
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    border-bottom: 1px solid var(--rule-faint);
+    min-height: 56px;
+  }
+  .menu-item:active { background: var(--paper-warm); }
+  .menu-item-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.05em;
+    min-width: 24px;
+  }
+  .menu-item.active { color: var(--accent); font-style: italic; }
+  .menu-item.active .menu-item-num { color: var(--accent); }
+
+  /* ====== MAIN CONTENT ====== */
+  .content {
+    padding: 22px 18px calc(var(--safe-bottom) + 40px);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .article-head {
+    margin-bottom: 22px;
+  }
+  .article-kicker {
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .article-title {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+  .article-deck {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .article-deck::first-letter {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-style: normal;
+    font-size: 40px;
+    line-height: 0.85;
+    float: left;
+    padding: 3px 7px 0 0;
+    color: var(--accent);
+  }
+
+  /* SECTION HEADERS */
+  .section-head {
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 22px 0 8px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .section-head .sect-num {
+    font-family: var(--mono);
+    color: var(--accent);
+    letter-spacing: 0;
+    font-size: 11px;
+  }
+
+  /* INSTRUCTIONS */
+  .instructions {
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1.55;
+    padding: 12px 16px;
+    background: linear-gradient(to right, var(--paper-warm), transparent);
+    border-left: 3px solid var(--accent-soft);
+    margin-bottom: 18px;
+  }
+  .instructions strong {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* DATA INPUT */
+  textarea.data {
+    width: 100%;
+    min-height: 160px;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.7;
+    background: var(--paper-warm);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 14px 16px;
+    color: var(--ink);
+    resize: vertical;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border 120ms, background 120ms;
+  }
+  textarea.data:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fdfaf1;
+  }
+  textarea.data::placeholder {
+    color: var(--ink-muted);
+    font-style: italic;
+  }
+
+  /* PARAMS */
+  .params {
+    background: var(--paper-warm);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-top: 14px;
+  }
+  .params-title {
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .param-field { margin-bottom: 12px; }
+  .param-field:last-child { margin-bottom: 0; }
+  .param-label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    margin-bottom: 5px;
+  }
+  .params-empty {
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--ink-muted);
+    font-size: 14px;
+    text-align: center;
+    padding: 14px 0;
+    line-height: 1.5;
+  }
+
+  /* Touch-friendly inputs */
+  select, input[type="number"], input[type="text"] {
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 16px; /* iOS won't zoom on focus when ≥16px */
+    padding: 10px 12px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    color: var(--ink);
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 44px; /* Apple HIG touch target */
+    transition: border 120ms;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%234a463f' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+  select:focus, input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  /* ACTIONS */
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .actions .btn.primary {
+    grid-column: 1 / -1;
+  }
+  .btn {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    padding: 14px 18px;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    min-height: 48px;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: all 140ms;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+    font-size: 13px;
+  }
+  .btn.primary:active { background: var(--accent); border-color: var(--accent); }
+  .btn.ghost {
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+  }
+  .btn.ghost:active {
+    background: var(--paper-warm);
+    color: var(--ink);
+  }
+
+  /* RESULTS */
+  .results-wrap {
+    margin-top: 28px;
+    display: none;
+  }
+  .results-wrap.show { display: block; }
+
+  .verdict {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--ink);
+    padding: 14px 16px;
+    background: var(--paper-warm);
+    border-left: 3px solid var(--accent);
+    margin-bottom: 18px;
+    border-radius: 0 4px 4px 0;
+  }
+  .verdict .narrative-tag {
+    display: block;
+    font-family: var(--sans);
+    font-style: normal;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 6px;
+  }
+
+  /* Stats table — adapted for narrow screens */
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .stats-table tr {
+    border-bottom: 1px solid var(--rule-faint);
+  }
+  .stats-table tr:first-child { border-top: 1px solid var(--ink); }
+  .stats-table tr:last-child { border-bottom: 1px solid var(--ink); }
+  .stats-table td {
+    padding: 11px 6px;
+    vertical-align: baseline;
+  }
+  .stats-table td:first-child {
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 14px;
+    width: 50%;
+    padding-left: 0;
+  }
+  .stats-table td:last-child {
+    text-align: right;
+    font-weight: 500;
+    color: var(--ink);
+    word-break: break-word;
+    padding-right: 0;
+  }
+  .stats-table tr.group-row { background: var(--paper-warm); }
+  .stats-table tr.spacer td { padding: 0; height: 6px; background: var(--paper); }
+  .sig-yes {
+    color: var(--accent);
+    font-weight: 600;
+    font-style: italic;
+    font-family: var(--serif);
+    font-size: 14px;
+  }
+  .sig-no {
+    color: var(--ink-muted);
+    font-style: italic;
+    font-family: var(--serif);
+    font-size: 14px;
+  }
+
+  /* CODE */
+  .code-tabs-row {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    border-bottom: 1px solid var(--ink);
+    margin-bottom: 0;
+  }
+  .code-tab {
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-bottom: none;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-radius: 4px 4px 0 0;
+    min-height: 40px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .code-tab.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .copy-spacer { flex: 1; border-bottom: 1px solid var(--ink); }
+  .copy-btn-mobile {
+    align-self: flex-end;
+    margin-bottom: 6px;
+    padding: 8px 14px;
+    font-size: 11px;
+    min-height: 36px;
+  }
+  pre.code {
+    margin: 0;
+    background: var(--ink);
+    color: #e8e1cc;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.65;
+    padding: 14px 16px;
+    overflow-x: auto;
+    border-radius: 0 0 4px 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  pre.code .com { color: #b8a988; font-style: italic; }
+  pre.code .kw  { color: #d4a574; }
+  pre.code .str { color: #a8c596; }
+  pre.code .num { color: #e8a878; }
+
+  .footer {
+    margin-top: 40px;
+    padding-top: 14px;
+    border-top: 2px double var(--ink);
+    text-align: center;
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    line-height: 1.7;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: calc(var(--safe-bottom) + 24px);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--sans);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    padding: 12px 22px;
+    border-radius: 24px;
+    opacity: 0;
+    transition: all 220ms;
+    pointer-events: none;
+    z-index: 200;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ====== DESKTOP LAYOUT (≥ 860px) ====== */
+  @media (min-width: 860px) {
+    body {
+      background-image:
+        radial-gradient(ellipse at top left, rgba(196, 169, 153, 0.08), transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(139, 44, 30, 0.04), transparent 50%);
+    }
+    .topbar {
+      position: static;
+      background: transparent;
+      color: var(--ink);
+      padding: 32px 48px 0;
+      box-shadow: none;
+    }
+    .topbar-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 20px;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding-bottom: 14px;
+      border-top: 3px double var(--ink);
+      border-bottom: 1px solid var(--ink);
+      padding-top: 14px;
+    }
+    .topbar h1 {
+      font-size: 32px;
+      text-align: center;
+    }
+    .topbar h1 .amp { color: var(--accent); }
+    .menu-btn {
+      border-color: var(--rule);
+      color: var(--ink);
+      background: transparent;
+      font-size: 10px;
+    }
+    .menu-icon::before, .menu-icon::after, .menu-icon span { background: var(--ink); }
+    .desktop-tag {
+      font-family: var(--sans);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      text-align: right;
+    }
+    .content {
+      max-width: 760px;
+      padding: 30px 48px 80px;
+    }
+    .article-title { font-size: 32px; }
+    .article-deck { font-size: 18px; }
+    .article-deck::first-letter { font-size: 52px; }
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 22px;
+      align-items: start;
+    }
+    .input-grid .params { margin-top: 0; }
+    .actions { grid-template-columns: auto auto auto; }
+    .actions .btn.primary { grid-column: auto; }
+  }
+
+  /* PRINT */
+  @media print {
+    .topbar, .actions, .code-tabs-row, pre.code, .menu-sheet { display: none !important; }
+    body { background: white; }
+    .content { padding: 0; max-width: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-grid">
+    <button class="menu-btn" id="menu-toggle" aria-label="Open analysis menu">
+      <span class="menu-icon"><span></span></span>
+      <span>Menu</span>
+    </button>
+    <h1>The Statistical <span class="amp">&</span> Methods Workbench</h1>
+    <div class="desktop-tag" id="today-stamp"></div>
+  </div>
+</header>
+
+<!-- MENU SHEET -->
+<div class="menu-sheet" id="menu-sheet">
+  <div class="menu-panel">
+    <div class="menu-handle"></div>
+    <div class="menu-title">Index of analyses</div>
+    <button class="menu-item active" data-analysis="descriptive"><span class="menu-item-num">I</span><span>Descriptive statistics</span></button>
+    <button class="menu-item" data-analysis="ttest"><span class="menu-item-num">II</span><span>t-test</span></button>
+    <button class="menu-item" data-analysis="anova"><span class="menu-item-num">III</span><span>One-way ANOVA</span></button>
+    <button class="menu-item" data-analysis="correlation"><span class="menu-item-num">IV</span><span>Correlation</span></button>
+    <button class="menu-item" data-analysis="regression"><span class="menu-item-num">V</span><span>Linear regression</span></button>
+    <button class="menu-item" data-analysis="chisq"><span class="menu-item-num">VI</span><span>Chi-square independence</span></button>
+    <button class="menu-item" data-analysis="proportion"><span class="menu-item-num">VII</span><span>Proportion test</span></button>
+    <button class="menu-item" data-analysis="normality"><span class="menu-item-num">VIII</span><span>Normality assessment</span></button>
+    <button class="menu-item" data-analysis="nonparam"><span class="menu-item-num">IX</span><span>Nonparametric tests</span></button>
+  </div>
+</div>
+
+<main class="content">
+
+  <header class="article-head">
+    <div class="article-kicker" id="kicker">Article the first</div>
+    <h2 class="article-title" id="article-title">Descriptive statistics</h2>
+    <p class="article-deck" id="article-deck">Summarise a single sample of numeric observations — central tendency, spread, shape, and a confidence interval for the mean.</p>
+  </header>
+
+  <div class="section-head"><span class="sect-num">§ I.</span> Method &amp; instructions</div>
+  <div class="instructions" id="instructions"></div>
+
+  <div class="section-head"><span class="sect-num">§ II.</span> Data &amp; parameters</div>
+  <div class="input-grid">
+    <div>
+      <textarea class="data" id="data-input" inputmode="decimal" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste data here..."></textarea>
+    </div>
+    <aside class="params" id="params">
+      <div class="params-title">Parameters</div>
+      <div id="param-fields"></div>
+    </aside>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" id="run-btn">Run analysis</button>
+    <button class="btn ghost" id="example-btn">Load example</button>
+    <button class="btn ghost" id="clear-btn">Clear</button>
+  </div>
+
+  <div class="results-wrap" id="results-wrap">
+
+    <div class="section-head"><span class="sect-num">§ III.</span> Results</div>
+    <div class="verdict" id="verdict"></div>
+    <table class="stats-table" id="stats-table"></table>
+
+    <div class="section-head"><span class="sect-num">§ IV.</span> Reproducible code</div>
+    <div class="code-tabs-row">
+      <button class="code-tab active" data-lang="r">R</button>
+      <button class="code-tab" data-lang="py">Python</button>
+      <span class="copy-spacer"></span>
+      <button class="btn ghost copy-btn-mobile" id="copy-btn">Copy</button>
+    </div>
+    <pre class="code" id="code-block"></pre>
+
+  </div>
+
+  <footer class="footer">
+    Self-contained · Offline-capable · MIT licensed<br>
+    <span id="foot-anal">Currently viewing: Descriptive</span>
+  </footer>
+
+</main>
+
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+'use strict';
+
+/* CONFIG, parsing, stats, runners, code generators — identical to desktop version */
+
+const CONFIG = {
+  descriptive: {
+    kicker: 'Article the first', title: 'Descriptive statistics',
+    deck: 'Summarise a single sample of numeric observations — central tendency, spread, shape, and a confidence interval for the mean.',
+    instructions: 'Paste one column of numeric values, one per line (commas, spaces, or tabs also accepted). Returns <strong>n, mean, SD, SE, 95% CI, median, quartiles, range, skewness</strong> and excess kurtosis.',
+    example: '23.4\n25.1\n22.8\n26.3\n24.5\n23.9\n25.7\n24.1\n22.6\n25.4\n24.8\n23.2\n26.1\n24.6\n23.7',
+    params: []
+  },
+  ttest: {
+    kicker: 'Article the second', title: 't-test (one, two, paired)',
+    deck: 'Compare a mean to a hypothesised value, or two means to one another. Welch&rsquo;s correction is applied for unequal variances.',
+    instructions: 'For <strong>one-sample</strong>: paste one column. For <strong>two-sample</strong> or <strong>paired</strong>: paste two groups separated by a blank line, the first line of each being the group name (optional).',
+    example: 'Group A\n5.2\n5.8\n5.5\n6.1\n5.9\n5.4\n5.7\n6.0\n\nGroup B\n6.3\n6.5\n6.1\n6.7\n6.4\n6.8\n6.2\n6.6',
+    params: [
+      { id: 'ttest-type', label: 'Test type', type: 'select', options: [['two', 'Two-sample (Welch)'], ['one', 'One-sample'], ['paired', 'Paired']] },
+      { id: 'ttest-mu', label: 'μ₀ (one-sample only)', type: 'number', value: '0', step: '0.1' },
+      { id: 'ttest-alpha', label: 'α', type: 'number', value: '0.05', step: '0.01' }
+    ]
+  },
+  anova: {
+    kicker: 'Article the third', title: 'One-way ANOVA',
+    deck: 'Test whether the means of three or more independent groups differ. Reports F, p, and η² effect size.',
+    instructions: 'Paste each group as a block separated by a <strong>blank line</strong>. The first line of each block is the group label (use a non-numeric string).',
+    example: 'Low dose\n12.1\n11.8\n12.5\n12.3\n11.9\n12.0\n\nMid dose\n14.2\n13.8\n14.5\n14.1\n13.9\n14.0\n\nHigh dose\n16.3\n15.9\n16.5\n16.1\n16.7\n16.2',
+    params: [{ id: 'anova-alpha', label: 'α', type: 'number', value: '0.05', step: '0.01' }]
+  },
+  correlation: {
+    kicker: 'Article the fourth', title: 'Correlation',
+    deck: 'Pearson, Spearman, and Kendall coefficients computed in one pass — useful when assumptions about linearity or normality are in question.',
+    instructions: 'Paste two columns, separated by space, tab, or comma. One pair per line.',
+    example: '1, 2.1\n2, 4.3\n3, 5.9\n4, 8.2\n5, 9.8\n6, 12.1\n7, 14.3\n8, 15.9\n9, 18.2\n10, 19.8',
+    params: []
+  },
+  regression: {
+    kicker: 'Article the fifth', title: 'Simple linear regression',
+    deck: 'Ordinary least squares fit of y on x — coefficients, R², adjusted R², residual SE, and F-test for the overall regression.',
+    instructions: 'Paste two columns, <strong>x then y</strong>, separated by space, tab, or comma. One pair per line.',
+    example: '1, 2.1\n2, 4.3\n3, 5.9\n4, 8.2\n5, 9.8\n6, 12.1\n7, 14.3\n8, 15.9\n9, 18.2\n10, 19.8',
+    params: []
+  },
+  chisq: {
+    kicker: 'Article the sixth', title: 'Chi-square test of independence',
+    deck: 'Pearson χ² for contingency tables. Cramér&rsquo;s V reported as a measure of association strength.',
+    instructions: 'Paste a contingency table. Rows on separate lines; cells separated by commas, tabs, or spaces. Header row and label column are optional.',
+    example: ',Yes,No\nTreatment,45,15\nControl,30,30',
+    params: []
+  },
+  proportion: {
+    kicker: 'Article the seventh', title: 'Proportion test',
+    deck: 'Test a single proportion against a hypothesised value, or compare two independent proportions.',
+    instructions: 'No data paste needed for this test — enter success and trial counts in the parameters panel.',
+    example: '',
+    params: [
+      { id: 'prop-type', label: 'Test type', type: 'select', options: [['one', 'One-sample'], ['two', 'Two-sample']] },
+      { id: 'prop-x1', label: 'Successes — group 1', type: 'number', value: '45' },
+      { id: 'prop-n1', label: 'Total — group 1', type: 'number', value: '100' },
+      { id: 'prop-x2', label: 'Successes — group 2', type: 'number', value: '35' },
+      { id: 'prop-n2', label: 'Total — group 2', type: 'number', value: '100' },
+      { id: 'prop-p0', label: 'p₀ (one-sample)', type: 'number', value: '0.5', step: '0.01' }
+    ]
+  },
+  normality: {
+    kicker: 'Article the eighth', title: 'Normality assessment',
+    deck: 'Jarque-Bera and D&rsquo;Agostino-style z-tests on skewness and excess kurtosis.',
+    instructions: 'Paste one column of numeric values (≥4 observations). Returns skewness, excess kurtosis, their z-tests, and the joint Jarque-Bera statistic.',
+    example: '23.4\n25.1\n22.8\n26.3\n24.5\n23.9\n25.7\n24.1\n22.6\n25.4\n24.8\n23.2\n26.1\n24.6\n23.7\n25.0\n24.2\n23.8',
+    params: []
+  },
+  nonparam: {
+    kicker: 'Article the ninth', title: 'Nonparametric tests',
+    deck: 'Mann-Whitney U for two independent samples; Wilcoxon signed-rank for paired data. Use when normality is doubtful.',
+    instructions: 'Paste two groups separated by a <strong>blank line</strong>. Choose Mann-Whitney for independent samples or Wilcoxon for paired.',
+    example: 'Control\n12\n15\n14\n11\n16\n13\n10\n14\n\nTreated\n17\n19\n18\n20\n16\n21\n19\n18',
+    params: [{ id: 'np-type', label: 'Test type', type: 'select', options: [['mw', 'Mann-Whitney U (independent)'], ['wsr', 'Wilcoxon signed-rank (paired)']] }]
+  }
+};
+
+/* PARSERS */
+function parseNumbers(text) {
+  return text.split(/[\s,;\t]+/).map(s => s.trim()).filter(s => s.length > 0).map(Number).filter(n => !isNaN(n));
+}
+function parseGroups(text) {
+  const blocks = text.split(/\n\s*\n/).map(b => b.trim()).filter(b => b.length > 0);
+  return blocks.map(block => {
+    const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    let name = 'Group', values;
+    const firstAsNum = Number(lines[0].split(/[\s,;\t]+/)[0]);
+    if (isNaN(firstAsNum)) { name = lines[0]; values = parseNumbers(lines.slice(1).join('\n')); }
+    else { values = parseNumbers(block); }
+    return { name, values };
+  });
+}
+function parseTwoCol(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const xs = [], ys = [];
+  for (const line of lines) {
+    const parts = line.split(/[\s,;\t]+/).map(Number);
+    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      xs.push(parts[0]); ys.push(parts[1]);
+    }
+  }
+  return { xs, ys };
+}
+function parseTable(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const rows = lines.map(l => l.split(/[\s,;\t]+/));
+  const firstRowHasLabels = isNaN(Number(rows[0][1])) || rows[0][0] === '';
+  const firstColHasLabels = isNaN(Number(rows[firstRowHasLabels ? 1 : 0][0]));
+  let colLabels = [], rowLabels = [], data = [];
+  const startRow = firstRowHasLabels ? 1 : 0;
+  const startCol = firstColHasLabels ? 1 : 0;
+  colLabels = firstRowHasLabels ? rows[0].slice(startCol) : rows[0].map((_, i) => 'C' + (i + 1));
+  for (let i = startRow; i < rows.length; i++) {
+    rowLabels.push(firstColHasLabels ? rows[i][0] : 'R' + (i - startRow + 1));
+    data.push(rows[i].slice(startCol).map(Number));
+  }
+  return { rowLabels, colLabels, data };
+}
+
+/* STATS */
+const sum = a => a.reduce((s, x) => s + x, 0);
+const mean = a => sum(a) / a.length;
+function variance(a, sample = true) {
+  const m = mean(a);
+  return sum(a.map(x => (x - m) ** 2)) / (a.length - (sample ? 1 : 0));
+}
+const sd = (a, s = true) => Math.sqrt(variance(a, s));
+function quantile(arr, q) {
+  const a = [...arr].sort((x, y) => x - y);
+  const pos = (a.length - 1) * q;
+  const base = Math.floor(pos), rest = pos - base;
+  return a[base + 1] !== undefined ? a[base] + rest * (a[base + 1] - a[base]) : a[base];
+}
+function skewness(a) {
+  const m = mean(a), s = sd(a), n = a.length;
+  return (n / ((n - 1) * (n - 2))) * sum(a.map(x => ((x - m) / s) ** 3));
+}
+function kurtosis(a) {
+  const m = mean(a), s = sd(a), n = a.length;
+  return (n * (n + 1) / ((n - 1) * (n - 2) * (n - 3))) * sum(a.map(x => ((x - m) / s) ** 4)) - 3 * (n - 1) ** 2 / ((n - 2) * (n - 3));
+}
+
+/* DISTRIBUTIONS */
+function lgamma(x) {
+  const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+  let y = x, t = x + 5.5;
+  t -= (x + 0.5) * Math.log(t);
+  let ser = 1.000000000190015;
+  for (let j = 0; j < 6; j++) { y++; ser += c[j] / y; }
+  return -t + Math.log(2.5066282746310005 * ser / x);
+}
+function betaCF(x, a, b) {
+  const MAXIT = 200, EPS = 3e-7, FPMIN = 1e-30;
+  const qab = a + b, qap = a + 1, qam = a - 1;
+  let c = 1, d = 1 - qab * x / qap;
+  if (Math.abs(d) < FPMIN) d = FPMIN;
+  d = 1 / d; let h = d;
+  for (let m = 1; m <= MAXIT; m++) {
+    const m2 = 2 * m;
+    let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+    d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d; h *= d * c;
+    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+    d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d; const del = d * c; h *= del;
+    if (Math.abs(del - 1) < EPS) break;
+  }
+  return h;
+}
+function betaInc(x, a, b) {
+  if (x === 0 || x === 1) return x;
+  const bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+  if (x < (a + 1) / (a + b + 2)) return bt * betaCF(x, a, b) / a;
+  return 1 - bt * betaCF(1 - x, b, a) / b;
+}
+function tPvalue(t, df) { const x = df / (df + t * t); return betaInc(x, df / 2, 0.5); }
+function fPvalue(f, df1, df2) { if (f <= 0) return 1; const x = df2 / (df2 + df1 * f); return betaInc(x, df2 / 2, df1 / 2); }
+function gammaIncReg(a, x) {
+  if (x < 0 || a <= 0) return 0;
+  if (x < a + 1) {
+    let ap = a, s = 1 / a, del = s;
+    for (let n = 1; n <= 200; n++) { ap++; del *= x / ap; s += del; if (Math.abs(del) < Math.abs(s) * 3e-7) break; }
+    return s * Math.exp(-x + a * Math.log(x) - lgamma(a));
+  }
+  let b = x + 1 - a, c = 1 / 1e-30, d = 1 / b, h = d;
+  for (let i = 1; i <= 200; i++) {
+    const an = -i * (i - a);
+    b += 2; d = an * d + b;
+    if (Math.abs(d) < 1e-30) d = 1e-30;
+    c = b + an / c; if (Math.abs(c) < 1e-30) c = 1e-30;
+    d = 1 / d; const del = d * c; h *= del;
+    if (Math.abs(del - 1) < 3e-7) break;
+  }
+  return 1 - Math.exp(-x + a * Math.log(x) - lgamma(a)) * h;
+}
+function chisqPvalue(x, df) { if (x <= 0) return 1; return 1 - gammaIncReg(df / 2, x / 2); }
+function tCrit(p, df) {
+  let lo = 0, hi = 100;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (tPvalue(mid, df) < p) hi = mid; else lo = mid;
+  }
+  return (lo + hi) / 2;
+}
+function normPvalue(z) {
+  const a = Math.abs(z);
+  const t = 1 / (1 + 0.2316419 * a);
+  const d = 0.3989422804 * Math.exp(-a * a / 2);
+  const p = d * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  return 2 * p;
+}
+
+function fmt(x, d = 4) {
+  if (!isFinite(x)) return '—';
+  if (x === 0) return '0';
+  if (Math.abs(x) < 0.0001) return x.toExponential(2);
+  return Number(x).toFixed(d);
+}
+function fmtP(p) { if (p < 0.0001) return '< 0.0001'; return p.toFixed(4); }
+function sigBadge(p, alpha = 0.05) {
+  return p < alpha
+    ? `<span class="sig-yes">significant at α=${alpha}</span>`
+    : `<span class="sig-no">not significant at α=${alpha}</span>`;
+}
+
+function ranks(a) {
+  const idx = a.map((v, i) => [v, i]).sort((x, y) => x[0] - y[0]);
+  const r = new Array(a.length);
+  let i = 0;
+  while (i < idx.length) {
+    let j = i;
+    while (j + 1 < idx.length && idx[j + 1][0] === idx[i][0]) j++;
+    const avg = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) r[idx[k][1]] = avg;
+    i = j + 1;
+  }
+  return r;
+}
+
+/* RUNNERS (same logic as desktop) */
+function runDescriptive(text) {
+  const x = parseNumbers(text);
+  if (x.length < 2) return { error: 'Need at least 2 numeric values.' };
+  const n = x.length, m = mean(x), s = sd(x), med = quantile(x, 0.5);
+  const q1 = quantile(x, 0.25), q3 = quantile(x, 0.75);
+  const min = Math.min(...x), max = Math.max(...x);
+  const sk = n >= 3 ? skewness(x) : NaN, kt = n >= 4 ? kurtosis(x) : NaN;
+  const se = s / Math.sqrt(n);
+  const tc = tCrit(0.05, n - 1);
+  const ci = [m - tc * se, m + tc * se];
+  return {
+    rows: [
+      ['n', n], ['Mean', fmt(m)], ['SD', fmt(s)], ['SE', fmt(se)],
+      ['95% CI for mean', `[${fmt(ci[0])}, ${fmt(ci[1])}]`],
+      ['Median', fmt(med)], ['Q1', fmt(q1)], ['Q3', fmt(q3)], ['IQR', fmt(q3 - q1)],
+      ['Min', fmt(min)], ['Max', fmt(max)], ['Range', fmt(max - min)],
+      ['Skewness', isNaN(sk) ? '—' : fmt(sk, 3)],
+      ['Excess kurtosis', isNaN(kt) ? '—' : fmt(kt, 3)]
+    ],
+    narrative: `${n} observations. Mean ${fmt(m, 3)} (SD ${fmt(s, 3)}); 95% CI [${fmt(ci[0], 3)}, ${fmt(ci[1], 3)}]; median ${fmt(med, 3)}.`
+  };
+}
+function runTtest(text, params) {
+  const type = params['ttest-type'] || 'two';
+  const mu = parseFloat(params['ttest-mu'] || '0');
+  const alpha = parseFloat(params['ttest-alpha'] || '0.05');
+  if (type === 'one') {
+    const x = parseNumbers(text);
+    if (x.length < 2) return { error: 'Need at least 2 values.' };
+    const n = x.length, m = mean(x), s = sd(x), se = s / Math.sqrt(n);
+    const t = (m - mu) / se, df = n - 1, p = tPvalue(Math.abs(t), df);
+    return {
+      rows: [['n', n], ['Mean', fmt(m)], ['SD', fmt(s)], ['μ₀', mu],
+             ['t', fmt(t, 3)], ['df', df], ['p-value', fmtP(p)], ['Verdict', sigBadge(p, alpha)]],
+      narrative: `One-sample t-test of H₀: μ = ${mu}. t(${df}) = ${fmt(t, 3)}, p = ${fmtP(p)}.`
+    };
+  }
+  const groups = parseGroups(text);
+  if (groups.length < 2) return { error: 'Need two groups separated by a blank line.' };
+  const [a, b] = groups;
+  if (a.values.length < 2 || b.values.length < 2) return { error: 'Each group needs ≥2 values.' };
+  if (type === 'paired') {
+    if (a.values.length !== b.values.length) return { error: 'Paired test requires equal-length groups.' };
+    const d = a.values.map((v, i) => v - b.values[i]);
+    const n = d.length, m = mean(d), s = sd(d), se = s / Math.sqrt(n);
+    const t = m / se, df = n - 1, p = tPvalue(Math.abs(t), df);
+    return {
+      rows: [['n pairs', n], ['Mean diff', fmt(m)], ['SD diff', fmt(s)],
+             ['t', fmt(t, 3)], ['df', df], ['p-value', fmtP(p)], ['Verdict', sigBadge(p, alpha)]],
+      narrative: `Paired t-test on ${n} pairs. t(${df}) = ${fmt(t, 3)}, p = ${fmtP(p)}.`
+    };
+  }
+  const n1 = a.values.length, n2 = b.values.length;
+  const m1 = mean(a.values), m2 = mean(b.values);
+  const v1 = variance(a.values), v2 = variance(b.values);
+  const se = Math.sqrt(v1 / n1 + v2 / n2);
+  const t = (m1 - m2) / se;
+  const df = Math.pow(v1 / n1 + v2 / n2, 2) / (Math.pow(v1 / n1, 2) / (n1 - 1) + Math.pow(v2 / n2, 2) / (n2 - 1));
+  const p = tPvalue(Math.abs(t), df);
+  const pooledSD = Math.sqrt(((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2));
+  const d = (m1 - m2) / pooledSD;
+  return {
+    rows: [
+      [`${a.name}`, `n=${n1}, m=${fmt(m1, 3)}, s=${fmt(Math.sqrt(v1), 3)}`],
+      [`${b.name}`, `n=${n2}, m=${fmt(m2, 3)}, s=${fmt(Math.sqrt(v2), 3)}`],
+      ['Mean diff', fmt(m1 - m2)],
+      ['t (Welch)', fmt(t, 3)], ['df', fmt(df, 2)], ['p-value', fmtP(p)],
+      ["Cohen's d", fmt(d, 3)], ['Verdict', sigBadge(p, alpha)]
+    ],
+    narrative: `Welch&rsquo;s two-sample t-test. t(${fmt(df, 2)}) = ${fmt(t, 3)}, p = ${fmtP(p)}; d = ${fmt(d, 3)}.`
+  };
+}
+function runAnova(text, params) {
+  const alpha = parseFloat(params['anova-alpha'] || '0.05');
+  const groups = parseGroups(text);
+  if (groups.length < 2) return { error: 'Need at least 2 groups separated by blank lines.' };
+  const all = groups.flatMap(g => g.values);
+  const grandMean = mean(all);
+  const k = groups.length, N = all.length;
+  let ssb = 0, ssw = 0;
+  for (const g of groups) {
+    const gm = mean(g.values);
+    ssb += g.values.length * (gm - grandMean) ** 2;
+    for (const v of g.values) ssw += (v - gm) ** 2;
+  }
+  const dfB = k - 1, dfW = N - k;
+  const msB = ssb / dfB, msW = ssw / dfW;
+  const F = msB / msW;
+  const p = fPvalue(F, dfB, dfW);
+  const eta2 = ssb / (ssb + ssw);
+  const groupRows = groups.map(g => [g.name, `n=${g.values.length}, m=${fmt(mean(g.values), 3)}, s=${fmt(sd(g.values), 3)}`, 'group']);
+  return {
+    rows: [...groupRows, ['', '', 'spacer'],
+      ['Groups (k)', k], ['Total n', N],
+      ['SS between', fmt(ssb, 3)], ['SS within', fmt(ssw, 3)],
+      ['df', `${dfB} / ${dfW}`],
+      ['MS between', fmt(msB, 3)], ['MS within', fmt(msW, 3)],
+      ['F', fmt(F, 3)], ['p-value', fmtP(p)],
+      ['η²', fmt(eta2, 3)], ['Verdict', sigBadge(p, alpha)]
+    ],
+    narrative: `One-way ANOVA across ${k} groups (N = ${N}). F(${dfB}, ${dfW}) = ${fmt(F, 3)}, p = ${fmtP(p)}, η² = ${fmt(eta2, 3)}.`
+  };
+}
+function pearsonR(xs, ys) {
+  const n = xs.length, mx = mean(xs), my = mean(ys);
+  let num = 0, dx = 0, dy = 0;
+  for (let i = 0; i < n; i++) { num += (xs[i] - mx) * (ys[i] - my); dx += (xs[i] - mx) ** 2; dy += (ys[i] - my) ** 2; }
+  return num / Math.sqrt(dx * dy);
+}
+function runCorrelation(text) {
+  const { xs, ys } = parseTwoCol(text);
+  if (xs.length < 3) return { error: 'Need at least 3 paired observations.' };
+  const n = xs.length;
+  const r = pearsonR(xs, ys);
+  const tP = r * Math.sqrt((n - 2) / (1 - r * r));
+  const pP = tPvalue(Math.abs(tP), n - 2);
+  const rxs = ranks(xs), rys = ranks(ys);
+  const rho = pearsonR(rxs, rys);
+  const tS = rho * Math.sqrt((n - 2) / (1 - rho * rho));
+  const pS = tPvalue(Math.abs(tS), n - 2);
+  let conc = 0, disc = 0;
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const s = Math.sign(xs[i] - xs[j]) * Math.sign(ys[i] - ys[j]);
+    if (s > 0) conc++; else if (s < 0) disc++;
+  }
+  const tau = (conc - disc) / (n * (n - 1) / 2);
+  const zTau = tau / Math.sqrt((2 * (2 * n + 5)) / (9 * n * (n - 1)));
+  const pT = normPvalue(zTau);
+  return {
+    rows: [['n', n],
+           ['Pearson r', fmt(r, 4)], ['Pearson p', fmtP(pP)],
+           ['Spearman ρ', fmt(rho, 4)], ['Spearman p', fmtP(pS)],
+           ['Kendall τ', fmt(tau, 4)], ['Kendall p', fmtP(pT)],
+           ['Verdict (Pearson)', sigBadge(pP)]],
+    narrative: `Pearson r = ${fmt(r, 3)} (p = ${fmtP(pP)}); Spearman ρ = ${fmt(rho, 3)}; Kendall τ = ${fmt(tau, 3)}.`
+  };
+}
+function runRegression(text) {
+  const { xs, ys } = parseTwoCol(text);
+  if (xs.length < 3) return { error: 'Need at least 3 paired observations.' };
+  const n = xs.length, mx = mean(xs), my = mean(ys);
+  let sxx = 0, sxy = 0, syy = 0;
+  for (let i = 0; i < n; i++) { sxx += (xs[i] - mx) ** 2; syy += (ys[i] - my) ** 2; sxy += (xs[i] - mx) * (ys[i] - my); }
+  const b1 = sxy / sxx, b0 = my - b1 * mx;
+  const resid = xs.map((x, i) => ys[i] - (b0 + b1 * x));
+  const sse = sum(resid.map(r => r * r)); const sst = syy;
+  const r2 = 1 - sse / sst; const df = n - 2;
+  const mse = sse / df, rse = Math.sqrt(mse);
+  const seB1 = Math.sqrt(mse / sxx);
+  const seB0 = Math.sqrt(mse * (1 / n + mx * mx / sxx));
+  const tB1 = b1 / seB1, tB0 = b0 / seB0;
+  const pB1 = tPvalue(Math.abs(tB1), df), pB0 = tPvalue(Math.abs(tB0), df);
+  const F = (r2 / 1) / ((1 - r2) / df);
+  const pF = fPvalue(F, 1, df);
+  const adjR2 = 1 - (1 - r2) * (n - 1) / df;
+  return {
+    rows: [['n', n], ['Equation', `y = ${fmt(b0, 3)} + ${fmt(b1, 3)}·x`],
+           ['β₀ (SE)', `${fmt(b0, 4)} (${fmt(seB0, 4)})`],
+           ['β₀ t / p', `${fmt(tB0, 3)} / ${fmtP(pB0)}`],
+           ['β₁ (SE)', `${fmt(b1, 4)} (${fmt(seB1, 4)})`],
+           ['β₁ t / p', `${fmt(tB1, 3)} / ${fmtP(pB1)}`],
+           ['R²', fmt(r2, 4)], ['Adj. R²', fmt(adjR2, 4)],
+           ['Residual SE', fmt(rse, 4)],
+           ['F (1, ' + df + ')', `${fmt(F, 3)}, p = ${fmtP(pF)}`],
+           ['Verdict', sigBadge(pF)]],
+    narrative: `Fit: <em>y = ${fmt(b0, 3)} + ${fmt(b1, 3)}·x</em>. R² = ${fmt(r2, 3)}, p = ${fmtP(pF)}.`
+  };
+}
+function runChisq(text) {
+  const { rowLabels, colLabels, data } = parseTable(text);
+  const r = data.length, c = data[0].length;
+  if (r < 2 || c < 2) return { error: 'Need a 2×2 or larger contingency table.' };
+  const rowTot = data.map(row => sum(row));
+  const colTot = colLabels.map((_, j) => sum(data.map(row => row[j])));
+  const N = sum(rowTot);
+  let chi = 0;
+  for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) {
+    const exp = rowTot[i] * colTot[j] / N;
+    if (exp > 0) chi += (data[i][j] - exp) ** 2 / exp;
+  }
+  const df = (r - 1) * (c - 1);
+  const p = chisqPvalue(chi, df);
+  const v = Math.sqrt(chi / (N * Math.min(r - 1, c - 1)));
+  return {
+    rows: [['Dimensions', `${r} × ${c}`], ['N', N],
+           ['χ²', fmt(chi, 3)], ['df', df], ['p-value', fmtP(p)],
+           ["Cramér's V", fmt(v, 3)], ['Verdict', sigBadge(p)]],
+    narrative: `χ²(${df}) = ${fmt(chi, 3)}, p = ${fmtP(p)}; Cramér&rsquo;s V = ${fmt(v, 3)}.`
+  };
+}
+function runProportion(_text, params) {
+  const type = params['prop-type'] || 'one';
+  const x1 = parseInt(params['prop-x1']), n1 = parseInt(params['prop-n1']);
+  if (type === 'one') {
+    const p0 = parseFloat(params['prop-p0'] || '0.5');
+    const phat = x1 / n1;
+    const se = Math.sqrt(p0 * (1 - p0) / n1);
+    const z = (phat - p0) / se;
+    const p = normPvalue(z);
+    return {
+      rows: [['x', x1], ['n', n1], ['p̂', fmt(phat, 4)], ['p₀', p0],
+             ['z', fmt(z, 3)], ['p-value', fmtP(p)], ['Verdict', sigBadge(p)]],
+      narrative: `One-sample proportion test. p̂ = ${fmt(phat, 3)} vs p₀ = ${p0}. z = ${fmt(z, 3)}, p = ${fmtP(p)}.`
+    };
+  }
+  const x2 = parseInt(params['prop-x2']), n2 = parseInt(params['prop-n2']);
+  const p1 = x1 / n1, p2 = x2 / n2;
+  const pooled = (x1 + x2) / (n1 + n2);
+  const se = Math.sqrt(pooled * (1 - pooled) * (1 / n1 + 1 / n2));
+  const z = (p1 - p2) / se;
+  const p = normPvalue(z);
+  return {
+    rows: [['Group 1', `${x1}/${n1} = ${fmt(p1, 4)}`],
+           ['Group 2', `${x2}/${n2} = ${fmt(p2, 4)}`],
+           ['p₁ − p₂', fmt(p1 - p2, 4)],
+           ['z', fmt(z, 3)], ['p-value', fmtP(p)], ['Verdict', sigBadge(p)]],
+    narrative: `Two-sample proportion test. z = ${fmt(z, 3)}, p = ${fmtP(p)}.`
+  };
+}
+function runNormality(text) {
+  const x = parseNumbers(text);
+  if (x.length < 4) return { error: 'Need at least 4 values.' };
+  const n = x.length, m = mean(x), s = sd(x);
+  const sk = skewness(x), kt = kurtosis(x);
+  const jb = (n / 6) * (sk * sk + (kt * kt) / 4);
+  const pJB = chisqPvalue(jb, 2);
+  const seSkew = Math.sqrt(6 * n * (n - 1) / ((n - 2) * (n + 1) * (n + 3)));
+  const zSkew = sk / seSkew;
+  const pSkew = normPvalue(zSkew);
+  const seKurt = 2 * seSkew * Math.sqrt((n * n - 1) / ((n - 3) * (n + 5)));
+  const zKurt = kt / seKurt;
+  const pKurt = normPvalue(zKurt);
+  const verdict = pJB > 0.05 ? 'Consistent with normal' : 'Departs from normal';
+  return {
+    rows: [['n', n], ['Mean', fmt(m)], ['SD', fmt(s)],
+           ['Skewness', `${fmt(sk, 3)} (z=${fmt(zSkew, 2)}, p=${fmtP(pSkew)})`],
+           ['Ex. kurtosis', `${fmt(kt, 3)} (z=${fmt(zKurt, 2)}, p=${fmtP(pKurt)})`],
+           ['Jarque-Bera', fmt(jb, 3)],
+           ['JB p-value', fmtP(pJB)],
+           ['Verdict', `<span class="${pJB > 0.05 ? 'sig-no' : 'sig-yes'}">${verdict}</span>`]],
+    narrative: `Jarque-Bera = ${fmt(jb, 3)}, p = ${fmtP(pJB)}. <strong>${verdict}</strong>.`
+  };
+}
+function runNonparam(text, params) {
+  const type = params['np-type'] || 'mw';
+  const groups = parseGroups(text);
+  if (groups.length < 2) return { error: 'Need two groups separated by a blank line.' };
+  const [a, b] = groups;
+  if (type === 'wsr') {
+    if (a.values.length !== b.values.length) return { error: 'Wilcoxon signed-rank requires equal-length groups.' };
+    const diffs = a.values.map((v, i) => v - b.values[i]).filter(d => d !== 0);
+    const n = diffs.length;
+    if (n < 5) return { error: 'Need at least 5 non-zero differences.' };
+    const absRanks = ranks(diffs.map(Math.abs));
+    let wPlus = 0;
+    for (let i = 0; i < n; i++) if (diffs[i] > 0) wPlus += absRanks[i];
+    const meanW = n * (n + 1) / 4;
+    const sdW = Math.sqrt(n * (n + 1) * (2 * n + 1) / 24);
+    const z = (wPlus - meanW) / sdW;
+    const p = normPvalue(z);
+    return {
+      rows: [['Non-zero pairs', n], ['W⁺', fmt(wPlus, 1)],
+             ['E[W]', fmt(meanW, 2)], ['SD[W]', fmt(sdW, 2)],
+             ['z', fmt(z, 3)], ['p-value', fmtP(p)], ['Verdict', sigBadge(p)]],
+      narrative: `Wilcoxon signed-rank: W⁺ = ${fmt(wPlus, 1)}, z = ${fmt(z, 3)}, p = ${fmtP(p)}.`
+    };
+  }
+  const all = [...a.values.map(v => [v, 'A']), ...b.values.map(v => [v, 'B'])];
+  const vals = all.map(p => p[0]);
+  const r = ranks(vals);
+  let ra = 0;
+  for (let i = 0; i < all.length; i++) if (all[i][1] === 'A') ra += r[i];
+  const n1 = a.values.length, n2 = b.values.length;
+  const U1 = ra - n1 * (n1 + 1) / 2;
+  const U2 = n1 * n2 - U1;
+  const U = Math.min(U1, U2);
+  const meanU = n1 * n2 / 2;
+  const sdU = Math.sqrt(n1 * n2 * (n1 + n2 + 1) / 12);
+  const z = (U - meanU) / sdU;
+  const p = normPvalue(z);
+  return {
+    rows: [[`${a.name}`, `n=${n1}, med=${fmt(quantile(a.values, 0.5), 3)}`],
+           [`${b.name}`, `n=${n2}, med=${fmt(quantile(b.values, 0.5), 3)}`],
+           ['U', fmt(U, 1)], ['E[U]', fmt(meanU, 2)],
+           ['z', fmt(z, 3)], ['p-value', fmtP(p)], ['Verdict', sigBadge(p)]],
+    narrative: `Mann-Whitney U = ${fmt(U, 1)}, z = ${fmt(z, 3)}, p = ${fmtP(p)}.`
+  };
+}
+
+const RUNNERS = {
+  descriptive: runDescriptive, ttest: runTtest, anova: runAnova,
+  correlation: runCorrelation, regression: runRegression,
+  chisq: runChisq, proportion: runProportion, normality: runNormality,
+  nonparam: runNonparam
+};
+
+/* CODE GENERATORS */
+function codeFor(analysis, lang, params) {
+  const a = params['ttest-alpha'] || '0.05';
+  const tt = params['ttest-type'] || 'two';
+  const propType = params['prop-type'] || 'one';
+  const npType = params['np-type'] || 'mw';
+  if (lang === 'r') return rCode(analysis, a, tt, propType, npType, params);
+  return pyCode(analysis, a, tt, propType, npType, params);
+}
+function rCode(analysis, a, tt, propType, npType, params) {
+  const lib = {
+    descriptive: `# Descriptive statistics
+x <- c(23.4, 25.1, 22.8, 26.3, 24.5)
+n     <- length(x)
+mu    <- mean(x)
+sigma <- sd(x)
+se    <- sigma / sqrt(n)
+ci    <- mu + c(-1, 1) * qt(0.975, df = n - 1) * se
+summary(x)
+cat(sprintf("n=%d mean=%.3f sd=%.3f\\n", n, mu, sigma))
+cat(sprintf("95%% CI: [%.3f, %.3f]\\n", ci[1], ci[2]))`,
+    ttest: tt === 'one'
+      ? `# One-sample t-test
+x <- c(5.2, 5.8, 5.5, 6.1, 5.9)
+t.test(x, mu = ${params['ttest-mu'] || 0}, conf.level = ${1 - parseFloat(a)})`
+      : tt === 'paired'
+      ? `# Paired t-test
+a <- c(5.2, 5.8, 5.5, 6.1, 5.9)
+b <- c(6.3, 6.5, 6.1, 6.7, 6.4)
+t.test(a, b, paired = TRUE)`
+      : `# Welch's two-sample t-test
+a <- c(5.2, 5.8, 5.5, 6.1, 5.9)
+b <- c(6.3, 6.5, 6.1, 6.7, 6.4)
+t.test(a, b, var.equal = FALSE)
+if (requireNamespace("effsize", quietly = TRUE))
+  effsize::cohen.d(a, b)`,
+    anova: `# One-way ANOVA
+df <- data.frame(
+  value = c(12.1, 11.8, 14.2, 13.8, 16.3, 15.9),
+  group = factor(rep(c("Low", "Mid", "High"), each = 2))
+)
+fit <- aov(value ~ group, data = df)
+summary(fit)
+TukeyHSD(fit)`,
+    correlation: `# Correlation
+x <- c(1, 2, 3, 4, 5)
+y <- c(2.1, 4.3, 5.9, 8.2, 9.8)
+cor.test(x, y, method = "pearson")
+cor.test(x, y, method = "spearman")
+cor.test(x, y, method = "kendall")`,
+    regression: `# Simple linear regression
+x <- c(1, 2, 3, 4, 5)
+y <- c(2.1, 4.3, 5.9, 8.2, 9.8)
+fit <- lm(y ~ x)
+summary(fit)
+confint(fit)
+par(mfrow = c(2, 2)); plot(fit)`,
+    chisq: `# Chi-square independence
+tbl <- matrix(c(45, 15, 30, 30), nrow = 2, byrow = TRUE,
+              dimnames = list(c("Trt","Ctrl"), c("Yes","No")))
+chisq.test(tbl)`,
+    proportion: propType === 'one'
+      ? `# One-sample proportion test
+prop.test(x = ${params['prop-x1'] || 45}, n = ${params['prop-n1'] || 100},
+          p = ${params['prop-p0'] || 0.5}, correct = FALSE)`
+      : `# Two-sample proportion test
+prop.test(x = c(${params['prop-x1'] || 45}, ${params['prop-x2'] || 35}),
+          n = c(${params['prop-n1'] || 100}, ${params['prop-n2'] || 100}),
+          correct = FALSE)`,
+    normality: `# Normality assessment
+x <- c(23.4, 25.1, 22.8, 26.3, 24.5, 23.9)
+shapiro.test(x)
+if (requireNamespace("nortest", quietly = TRUE))
+  nortest::ad.test(x)
+qqnorm(x); qqline(x)`,
+    nonparam: npType === 'wsr'
+      ? `# Wilcoxon signed-rank (paired)
+a <- c(12, 15, 14, 11, 16)
+b <- c(17, 19, 18, 20, 16)
+wilcox.test(a, b, paired = TRUE, exact = FALSE)`
+      : `# Mann-Whitney U (independent)
+a <- c(12, 15, 14, 11, 16)
+b <- c(17, 19, 18, 20, 16)
+wilcox.test(a, b, paired = FALSE, exact = FALSE)`
+  };
+  return lib[analysis];
+}
+function pyCode(analysis, a, tt, propType, npType, params) {
+  const lib = {
+    descriptive: `# Descriptive statistics
+import numpy as np
+from scipy import stats
+x = np.array([23.4, 25.1, 22.8, 26.3, 24.5])
+n     = len(x)
+mu    = x.mean()
+sigma = x.std(ddof=1)
+se    = sigma / np.sqrt(n)
+ci    = stats.t.interval(0.95, df=n-1, loc=mu, scale=se)
+print(f"n={n} mean={mu:.3f} sd={sigma:.3f}")
+print(f"95% CI: [{ci[0]:.3f}, {ci[1]:.3f}]")`,
+    ttest: tt === 'one'
+      ? `# One-sample t-test
+from scipy import stats
+import numpy as np
+x = np.array([5.2, 5.8, 5.5, 6.1, 5.9])
+r = stats.ttest_1samp(x, popmean=${params['ttest-mu'] || 0})
+print(f"t={r.statistic:.3f} p={r.pvalue:.4f}")`
+      : tt === 'paired'
+      ? `# Paired t-test
+from scipy import stats
+import numpy as np
+a = np.array([5.2, 5.8, 5.5, 6.1, 5.9])
+b = np.array([6.3, 6.5, 6.1, 6.7, 6.4])
+r = stats.ttest_rel(a, b)
+print(f"t={r.statistic:.3f} p={r.pvalue:.4f}")`
+      : `# Welch's two-sample t-test
+from scipy import stats
+import numpy as np
+a = np.array([5.2, 5.8, 5.5, 6.1, 5.9])
+b = np.array([6.3, 6.5, 6.1, 6.7, 6.4])
+r = stats.ttest_ind(a, b, equal_var=False)
+print(f"t={r.statistic:.3f} p={r.pvalue:.4f}")`,
+    anova: `# One-way ANOVA
+from scipy import stats
+import numpy as np
+groups = [
+  np.array([12.1, 11.8]),
+  np.array([14.2, 13.8]),
+  np.array([16.3, 15.9])
+]
+F, p = stats.f_oneway(*groups)
+print(f"F={F:.3f} p={p:.4f}")`,
+    correlation: `# Correlation
+from scipy import stats
+import numpy as np
+x = np.array([1, 2, 3, 4, 5])
+y = np.array([2.1, 4.3, 5.9, 8.2, 9.8])
+for name, fn in [("Pearson", stats.pearsonr),
+                 ("Spearman", stats.spearmanr),
+                 ("Kendall", stats.kendalltau)]:
+    r, p = fn(x, y)
+    print(f"{name}: r={r:.4f} p={p:.4f}")`,
+    regression: `# Linear regression
+import numpy as np
+import statsmodels.api as sm
+x = np.array([1, 2, 3, 4, 5])
+y = np.array([2.1, 4.3, 5.9, 8.2, 9.8])
+X = sm.add_constant(x)
+fit = sm.OLS(y, X).fit()
+print(fit.summary())`,
+    chisq: `# Chi-square independence
+from scipy import stats
+import numpy as np
+tbl = np.array([[45, 15], [30, 30]])
+chi2, p, dof, exp = stats.chi2_contingency(tbl, correction=False)
+print(f"chi2={chi2:.3f} df={dof} p={p:.4f}")`,
+    proportion: propType === 'one'
+      ? `# One-sample proportion test
+from statsmodels.stats.proportion import proportions_ztest
+z, p = proportions_ztest(count=${params['prop-x1'] || 45},
+                         nobs=${params['prop-n1'] || 100},
+                         value=${params['prop-p0'] || 0.5})
+print(f"z={z:.3f} p={p:.4f}")`
+      : `# Two-sample proportion test
+from statsmodels.stats.proportion import proportions_ztest
+import numpy as np
+z, p = proportions_ztest(
+  count=np.array([${params['prop-x1'] || 45}, ${params['prop-x2'] || 35}]),
+  nobs=np.array([${params['prop-n1'] || 100}, ${params['prop-n2'] || 100}])
+)
+print(f"z={z:.3f} p={p:.4f}")`,
+    normality: `# Normality assessment
+from scipy import stats
+import numpy as np
+x = np.array([23.4, 25.1, 22.8, 26.3, 24.5])
+print(stats.shapiro(x))
+print(stats.anderson(x, dist="norm"))`,
+    nonparam: npType === 'wsr'
+      ? `# Wilcoxon signed-rank (paired)
+from scipy import stats
+import numpy as np
+a = np.array([12, 15, 14, 11, 16])
+b = np.array([17, 19, 18, 20, 16])
+r = stats.wilcoxon(a, b)
+print(f"W={r.statistic:.1f} p={r.pvalue:.4f}")`
+      : `# Mann-Whitney U (independent)
+from scipy import stats
+import numpy as np
+a = np.array([12, 15, 14, 11, 16])
+b = np.array([17, 19, 18, 20, 16])
+r = stats.mannwhitneyu(a, b, alternative="two-sided")
+print(f"U={r.statistic:.1f} p={r.pvalue:.4f}")`
+  };
+  return lib[analysis];
+}
+
+function highlight(code, lang) {
+  const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let out = escaped;
+  out = out.replace(/(#.*)$/gm, '<span class="com">$1</span>');
+  out = out.replace(/("[^"]*"|'[^']*')/g, '<span class="str">$1</span>');
+  out = out.replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>');
+  const kw = lang === 'r'
+    ? /\b(c|function|if|else|for|while|return|TRUE|FALSE|NA|NULL)\b/g
+    : /\b(import|from|as|def|return|if|else|for|while|in|True|False|None|print|class)\b/g;
+  out = out.replace(kw, '<span class="kw">$1</span>');
+  return out;
+}
+
+/* UI WIRING */
+let current = 'descriptive';
+let currentLang = 'r';
+let lastInputs = null;
+
+const els = {
+  kicker: document.getElementById('kicker'),
+  title: document.getElementById('article-title'),
+  deck: document.getElementById('article-deck'),
+  instructions: document.getElementById('instructions'),
+  data: document.getElementById('data-input'),
+  paramFields: document.getElementById('param-fields'),
+  resultsWrap: document.getElementById('results-wrap'),
+  verdict: document.getElementById('verdict'),
+  table: document.getElementById('stats-table'),
+  codeBlock: document.getElementById('code-block'),
+  footAnal: document.getElementById('foot-anal'),
+  todayStamp: document.getElementById('today-stamp'),
+  menuSheet: document.getElementById('menu-sheet'),
+  menuToggle: document.getElementById('menu-toggle')
+};
+
+function renderAnalysis() {
+  const cfg = CONFIG[current];
+  els.kicker.textContent = cfg.kicker;
+  els.title.textContent = cfg.title;
+  els.deck.innerHTML = cfg.deck;
+  els.instructions.innerHTML = cfg.instructions;
+  els.footAnal.textContent = 'Currently viewing: ' + cfg.title;
+  document.title = cfg.title + ' — Workbench';
+
+  if (cfg.params.length === 0) {
+    els.paramFields.innerHTML = '<div class="params-empty">No parameters for this analysis.</div>';
+  } else {
+    els.paramFields.innerHTML = cfg.params.map(p => {
+      let input;
+      if (p.type === 'select') {
+        input = `<select id="${p.id}">${p.options.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>`;
+      } else {
+        input = `<input id="${p.id}" type="${p.type || 'text'}" inputmode="decimal" value="${p.value || ''}"${p.step ? ` step="${p.step}"` : ''}>`;
+      }
+      return `<div class="param-field"><label class="param-label" for="${p.id}">${p.label}</label>${input}</div>`;
+    }).join('');
+  }
+
+  els.data.placeholder = current === 'proportion'
+    ? 'Not required — proportion test uses parameters only.'
+    : 'Paste data here — see instructions above for format...';
+  els.resultsWrap.classList.remove('show');
+  document.querySelectorAll('.menu-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.analysis === current);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function collectParams() {
+  const cfg = CONFIG[current];
+  const out = {};
+  for (const p of cfg.params) {
+    const el = document.getElementById(p.id);
+    if (el) out[p.id] = el.value;
+  }
+  return out;
+}
+
+function renderResults(res) {
+  if (res.error) {
+    els.verdict.innerHTML = `<span class="narrative-tag">Could not run</span>${res.error}`;
+    els.table.innerHTML = '';
+    els.codeBlock.innerHTML = '';
+    els.resultsWrap.classList.add('show');
+    return;
+  }
+  els.verdict.innerHTML = `<span class="narrative-tag">Finding</span>${res.narrative || ''}`;
+  els.table.innerHTML = res.rows.map(row => {
+    if (row[2] === 'spacer') return `<tr class="spacer"><td colspan="2"></td></tr>`;
+    if (row[2] === 'group') return `<tr class="group-row"><td>${row[0]}</td><td>${row[1]}</td></tr>`;
+    return `<tr><td>${row[0]}</td><td>${row[1]}</td></tr>`;
+  }).join('');
+  els.resultsWrap.classList.add('show');
+  // Scroll results into view on mobile
+  setTimeout(() => {
+    els.resultsWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+function run() {
+  const params = collectParams();
+  const result = RUNNERS[current](els.data.value, params);
+  lastInputs = { analysis: current, params };
+  renderResults(result);
+  const code = codeFor(current, currentLang, params);
+  els.codeBlock.innerHTML = highlight(code, currentLang);
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.code-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.lang === lang);
+  });
+  if (lastInputs) {
+    els.codeBlock.innerHTML = highlight(codeFor(current, lang, lastInputs.params), lang);
+  }
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+function openMenu() { els.menuSheet.classList.add('open'); document.body.style.overflow = 'hidden'; }
+function closeMenu() { els.menuSheet.classList.remove('open'); document.body.style.overflow = ''; }
+
+/* EVENTS */
+els.menuToggle.addEventListener('click', openMenu);
+els.menuSheet.addEventListener('click', e => {
+  if (e.target === els.menuSheet) closeMenu();
+});
+document.querySelectorAll('.menu-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    current = btn.dataset.analysis;
+    closeMenu();
+    renderAnalysis();
+  });
+});
+document.getElementById('run-btn').addEventListener('click', run);
+document.getElementById('example-btn').addEventListener('click', () => {
+  els.data.value = CONFIG[current].example;
+});
+document.getElementById('clear-btn').addEventListener('click', () => {
+  els.data.value = '';
+  els.resultsWrap.classList.remove('show');
+});
+document.querySelectorAll('.code-tab').forEach(t => {
+  t.addEventListener('click', () => setLang(t.dataset.lang));
+});
+document.getElementById('copy-btn').addEventListener('click', () => {
+  if (!lastInputs) { toast('Run an analysis first'); return; }
+  const code = codeFor(current, currentLang, lastInputs.params);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(() => toast('Code copied'));
+  } else {
+    // Fallback for older browsers / iOS Safari edge cases
+    const ta = document.createElement('textarea');
+    ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Code copied'); }
+    catch (e) { toast('Copy failed'); }
+    document.body.removeChild(ta);
+  }
+});
+
+// Date stamp (desktop only — hidden on mobile by topbar layout)
+(function() {
+  const d = new Date();
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  els.todayStamp.textContent = `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+})();
+
+renderAnalysis();
+</script>
+
+</body>
+</html>
